@@ -4,7 +4,6 @@
 #include <stdint.h>
 
 #define I8080_PAIR_REGISTERS 4
-#define I8080_STACK_LEVEL 16
 
 #define BC_REG_INDEX  0
 #define DE_REG_INDEX  1
@@ -22,16 +21,30 @@ typedef union {
 #endif
 	} byte;
 	uint16_t word;
-} pair_reg;
+} pair_register_t;
 
-struct intel_8080 {
-	pair_reg regs[I8080_PAIR_REGISTERS];
+typedef struct {
+	uint8_t z:1;
+	uint8_t s:1;
+	uint8_t p:1;
+	uint8_t ac:1;
+	uint8_t cy:1;
+	uint8_t padding:3;
+} condition_bits_t;
+
+#define I8080_MEMORY_SIZE (64 * 1024)
+
+typedef struct {
+	pair_register_t regs[I8080_PAIR_REGISTERS];
 	uint16_t sp;
 	uint16_t pc;
-};
+	uint8_t *memory;
+	condition_bits_t cb;
+	uint8_t int_enable;
+} i8080_t;
 
-extern void i8080_reset(struct intel_8080 *);
-extern int i8080_execute(register struct intel_8080 *, register int);
-extern void i8080_interrupt(register struct intel_8080 *, register uint8_t);
+extern void intel_8080_reset(i8080_t *);
+extern int intel_8080_execute(register i8080_t *, register int);
+extern void intel_8080_interrupt(register i8080_t *, register uint8_t);
 
-#endif
+#endif /* _INTEL_8080_H */
