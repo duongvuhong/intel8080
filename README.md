@@ -21,7 +21,7 @@
 
 # Intel 8080
 ## About
-![](res/intel_8080.jpg)
+![](images/intel_8080.jpg)
 
 The Intel 8080 was the second 8-bit microprocessor designed and manufactred by Intel and was released in April 1974. It  
 is an extended and enhanced variant of the earlier 8008 design, although without binary compatibility. The initial  
@@ -149,10 +149,6 @@ Byte "parity" is checked after certain operations. The number of 1 bits in a byt
 The Parity bit is set to 1 for even parity, and is reset to 0 for odd parity.
 
 ## Instructions
-[8080 Instruction References](res/8080-by-opcode.html)
+[8080 Instruction References](http://www.emulator101.com/reference/8080-by-opcode.html) or [8080 Instruction Set with color](http://pastraiser.com/cpu/i8080/i8080_opcodes.html)
 
 _Please read "8080 Programmers Manual" document for more details about Intel 8080_
-
-# TODO
-* Fix: many ROM don't work.
-* Support: Super CHIP-48 instructions
