@@ -23,12 +23,12 @@ typedef union {
 	uint16_t word;
 } pair_register_t;
 
-typedef struct {
+typedef struct __attribute__((packed)) {
 	uint8_t z:1;
 	uint8_t s:1;
 	uint8_t p:1;
-	uint8_t ac:1;
 	uint8_t cy:1;
+	uint8_t ac:1;
 	uint8_t padding:3;
 } condition_bits_t;
 
@@ -39,12 +39,12 @@ typedef struct {
 	uint16_t sp;
 	uint16_t pc;
 	uint8_t *memory;
-	condition_bits_t cb;
 	uint8_t int_enable;
 } i8080_t;
 
 extern void intel_8080_reset(i8080_t *);
-extern int intel_8080_execute(register i8080_t *, register int);
-extern void intel_8080_interrupt(register i8080_t *, register uint8_t);
+extern int intel_8080_execute(i8080_t *, int);
+extern void intel_8080_interrupt(i8080_t *, int);
+#define intel_8080_interrupt(i, state) ((i)->int_enable = state)
 
 #endif /* _INTEL_8080_H */

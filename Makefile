@@ -1,15 +1,15 @@
-objects = intel_8080.o intel_8080_test.o
+objects = intel_8080.o
 
-CFLAGS += -std=gnu99 -Wall -O2
+CFLAGS := -std=gnu99 -Wall -Werror -fpic
 
-EMULATOR = emulator
+libname = libi8080.so
 
-all: $(EMULATOR)
+all: $(libname)
 
-$(EMULATOR): $(objects)
-	$(CC) -o $@ $^ $(LDFLAGS)
+$(libname): $(objects)
+	$(CC) -shared -o $@ $^
 
 clean:
-	-@$(RM) $(EMULATOR) $(DEBUGGER) *.o *.d
+	-@$(RM) $(libname) $(DEBUGGER) *.o *.d
 
 .PHONY: all clean
