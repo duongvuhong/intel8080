@@ -1,13 +1,13 @@
-objects = intel_8080.o
+objects = intel_8080.o intel_8080_test.o
 
-CFLAGS := -std=gnu99 -Wall -Werror -fpic
+CFLAGS := -std=gnu99 -Wall
 
-libname = libi8080.so
+libname = intel_8080
 
 all: $(libname)
 
 $(libname): $(objects)
-	$(CC) -shared -o $@ $^
+	$(CC) -o $@ $^
 
 clean:
 	-@$(RM) $(libname) $(DEBUGGER) *.o *.d

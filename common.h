@@ -1,7 +1,8 @@
 #ifndef _COMMON_H
-#define _COMMON_H 1
+# define _COMMON_H
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #ifdef __GNUC__
@@ -53,26 +54,40 @@
 #define STRING_CONTAIN(s, ss) (strstr(s, ss) != NULL)
 #define STRING_EMPTY(s1)      (strlen(s1) == 0)
 
-#ifdef CC_PRINT
-# if CC_PRINT_LEVEL >= 2
-#  define CC_INFO(format, ...) \
-	fprintf(stdout, "info: %s:%s():%d: " format, \
-			__FILE__, __func__, __LINE__, ##__VA_ARGS__)
-#  define CC_WARNING(format, ...) \
-	fprintf(stdout, "warning: %s:%s():%d: " format, \
-			__FILE__, __func__, __LINE__, ##__VA_ARGS__)
-#  define CC_ERROR(format, ...) \
-	fprintf(stderr, "error: %s:%s():%d: " format, \
-			__FILE__, __func__, __LINE__, ##__VA_ARGS__)
-# else
-#  define CC_INFO(format, ...) fprintf(stdout, format, ##__VA_ARGS__)
-#  define CC_WARNING(format, ...) fprintf(stdout, format, ##__VA_ARGS__)
-#  define CC_ERROR(format, ...) fprintf(stderr, format, ##__VA_ARGS__)
-# endif /* CC_PRINT_LEVEL >= 2 */
+#define RANDOM_BYTE ((uint8_t)(rand() % 256))
+
+#ifdef CC_VERBOSE
+#define CC_INFO(format, ...) \
+	fprintf(stdout, "INFO: %s:%i:%s(): " format, \
+				__FILE__, __LINE__, __func__, ##__VA_ARGS__);
+
+#define CC_WARNING(format, ...) \
+	fprintf(stdout, "WARNING: %s:%i:%s(): " format, \
+			__FILE__, __LINE__, __func__, ##__VA_ARGS__);
+
+#define CC_ERROR(format, ...) \
+	fprintf(stderr, "ERROR: %s:%i:%s(): " format, \
+			__FILE__, __LINE__, __func__, ##__VA_ARGS__);
 #else
-# define CC_INFO(format, ...)
-# define CC_WARNING(format, ...)
-# define CC_ERROR(format, ...)
-#endif /* CC_PRINT */
+#define CC_INFO(format, ...)
+#define CC_WARNING(format, ...)
+#define CC_ERROR(format, ...)
+#endif
+
+#define RETURN_WITH_ERRMSG_IF(exp, ret, format, ...) \
+do {                                                 \
+	if (exp) {                                       \
+		CC_ERROR(format, ##__VA_ARGS__);             \
+		return (ret);                                \
+	}                                                \
+} while (0)
+
+#define ASSERT_WITH_ERRMSG_IF(exp, ret, format, ...) \
+do {                                                 \
+	if (exp) {                                       \
+		CC_ERROR(format, ##__VA_ARGS__);             \
+		exit (ret);                                  \
+	}                                                \
+} while (0)
 
 #endif

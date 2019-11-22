@@ -1,130 +1,130 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
 
-#define CC_PRINT /* for CC_* macro */
+#define CC_VERBOSE /* for CC_* macro */
 #include "common.h"
+#define LOW_ENDIAN /* Intel family is low-endian */
 #include "intel_8080.h"
 
-#define I8080_MEMORY_SIZE (64 * 1024) /* 64 KiB */
+#define CYCLES_PER_EXECUTE 10
 
-#define B_REG    (i8080.regs[BC_REG_INDEX].byte.l)
-#define C_REG    (i8080.regs[BC_REG_INDEX].byte.h)
-#define BC_REG   (i8080.regs[BC_REG_INDEX].word)
-#define D_REG    (i8080.regs[DE_REG_INDEX].byte.l)
-#define E_REG    (i8080.regs[DE_REG_INDEX].byte.h)
-#define DE_REG   (i8080.regs[DE_REG_INDEX].word)
-#define H_REG    (i8080.regs[HL_REG_INDEX].byte.l)
-#define L_REG    (i8080.regs[HL_REG_INDEX].byte.h)
-#define HL_REG   (i8080.regs[HL_REG_INDEX].word)
-#define A_REG    (i8080.regs[PSW_REG_INDEX].byte.l)
-#define FLAG_REG (i8080.regs[PSW_REG_INDEX].byte.h)
-#define PSW_REG  (i8080.regs[PSW_REG_INDEX].word)
+static uint8_t *memory;
 
-static uint8_t memory[I8080_MEMORY_SIZE];
-
-static struct intel_8080 i8080;
-
-static void load_memory(const char *name, size_t p)
+uint8_t memory_read_b(uint16_t addr)
 {
-	char buff[100];
-	size_t total = 0, n;
+    return memory[addr];
+}
 
-	FILE *fp = fopen(name, "rb");
-	if (!fp) {
-		CC_ERROR("Failed to open file %s\n", name);
-		exit(1);
-	}
+void memory_write_b(uint16_t addr, uint8_t val)
+{
+    memory[addr] = val;
+}
 
-	while (!feof(fp) && (total + p) <= I8080_MEMORY_SIZE) {
-		n = fread(buff, 1, 100, fp);
-		memcpy(memory + p + total, buff, n);
-		total += n;
+static i8080_t cpu;
+
+static int test_finished = FALSE;
+
+static uint8_t port_in(void *userdata UNUSED, uint8_t port)
+{
+    uint8_t operation = (cpu.regs[BC_REG_INDEX].byte.l);
+
+    if (operation == 2) {
+        printf("%c", cpu.regs[DE_REG_INDEX].byte.l);
+    } else if (operation == 9) {
+        uint16_t addr = (cpu.regs[DE_REG_INDEX].word);
+        do {
+            printf("%c", memory[addr++]);
+        } while(memory[addr] != '$');
+    }
+
+    return 0xFF;
+}
+
+static void port_out(void *userdata UNUSED, uint8_t port UNUSED, uint8_t value UNUSED)
+{
+    test_finished = TRUE;
+}
+
+static int load_rom(const char *rom, uint16_t addr)
+{
+	size_t total = 0;
+	uint8_t buffer[100];
+	FILE *fp;
+
+	fp = fopen(rom, "rb");
+
+	while (total + addr < I8080_MEMORY_SIZE) {
+		size_t nread = fread(buffer, sizeof(uint8_t), 100, fp);
+		if (nread == 0)
+			break;
+
+		memcpy(memory + addr + total, buffer, nread);
+		total += nread;
 	}
 
 	fclose(fp);
 
-	if ((total + p) > I8080_MEMORY_SIZE) {
-		CC_ERROR("Not enough space for %s (>>%lu)\n", name, total);
-		exit(1);
-	}
+	if (total >= I8080_MEMORY_SIZE)
+		return -1;
 
-	CC_INFO("%s loaded, size %lu byte(s)\n", name, total);
-}
+	CC_INFO("Loaded %s (%lu bytes)\n", rom, total);
 
-static void execute_test(const char *name, int check)
-{
-	uint16_t pc;
-	int success;
-
-	memset(memory, 0, I8080_MEMORY_SIZE);
-	load_memory(name, 0x100);
-
-	memory[5] = 0xC9; /* inject RET at 0x0005 to handle "CALL 5" */
-
-	i8080_reset(&i8080);
-	i8080.pc = 0x100 & 0xffff;
-
-	for (;;) {
-		pc = i8080.pc;
-		if (memory[pc] == 0x76) {
-			printf("HLT at %04X\n", pc);
-			exit(1);
-		}
-		if (pc == 0x0005) {
-			if (C_REG == 9) {
-				for (int i = DE_REG; memory[i] != '$'; i++)
-					putchar(memory[i]);
-				success = 1;
-			}
-
-			if (C_REG == 2)
-				putchar((char)E_REG);
-		}
-
-		i8080_execute(&i8080, 1);
-
-		if (i8080.pc == 0) {
-			printf("\nJump to 0000 from %04X\n", pc);
-			if (check && !success)
-				exit(1);
-			return;
-		}
-	}
-}
-
-uint8_t i8080_memory_read(uint16_t addr)
-{
-	return memory[addr & 0xffff];
-}
-
-void i8080_memory_write(uint16_t addr, uint8_t val)
-{
-	memory[addr & 0xffff] = val;
-}
-
-uint8_t i8080_io_input(uint8_t port UNUSED)
-{
 	return 0;
 }
 
-void i8080_io_output(uint8_t val UNUSED, uint8_t port UNUSED)
+static void execute_test(const char* filename, unsigned long cyc_expected)
 {
+	unsigned long nins = 0;
+    long long diff;
 
+    intel_8080_reset(&cpu);
+    cpu.memory_read_b = memory_read_b;
+    cpu.memory_write_b = memory_write_b;
+    cpu.port_in = port_in;
+    cpu.port_out = port_out;
+
+    memset(memory, 0, I8080_MEMORY_SIZE);
+
+    if (load_rom(filename, 0x0100) != 0) {
+        return;
+    }
+
+    printf("*** TEST: %s\n", filename);
+
+    cpu.pc = 0x0100;
+    /* inject "out 1,a" at 0x0000 (signal to stop the test) */
+    memory[0x0000] = 0xD3;
+    memory[0x0001] = 0x00;
+    /* inject "in a,0" at 0x0005 (signal to output some characters) */
+    memory[0x0005] = 0xDB;
+    memory[0x0006] = 0x00;
+    memory[0x0007] = 0xC9;
+
+    test_finished = FALSE;
+
+    while (!test_finished) {
+        nins++;
+
+        intel_8080_step(&cpu);
+    }
+
+    diff = cyc_expected - cpu.cycles;
+
+    printf("\n*** %lu instructions executed on %lu cycles (expected=%lu, diff=%lld)\n\n",
+            nins, cpu.cycles, cyc_expected, diff);
 }
 
 int main(int argc, char **argv)
 {
-	if (argc != 2) {
-		CC_INFO("Usage: %s dir\n", argv[0]);
-		exit(1);
-	}
+    memory = malloc(sizeof(uint8_t) * I8080_MEMORY_SIZE);
 
-	execute_test("test/CPUTEST.COM", 0);
-	execute_test("test/TEST.COM", 0);
-	execute_test("test/8080PRE.COM", 1);
-	execute_test("test/8080EX1.COM", 0);
+    execute_test("cpu_tests/TST8080.COM", 4924LU);
+    //execute_test("cpu_tests/CPUTEST.COM", 255653383LU);
+    //execute_test("cpu_tests/8080PRE.COM", 7817LU);
+    //execute_test("cpu_tests/8080EXM.COM", 23803381171LU);
+
+    free(memory);
 
 	return 0;
 }
