@@ -25,6 +25,11 @@
 #define TRUE 1
 #define FALSE !TRUE
 
+#if defined(bool)
+# undef bool
+#endif
+#define bool int
+
 #if GCC_VERSION >= 30400
 # define __must_check   __attribute__((warn_unused_result))
 # define __malloc       __attribute__((__malloc))
