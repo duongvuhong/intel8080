@@ -17,6 +17,8 @@ do {                                                                 \
 #define pc         (i8080->pc)
 #define memory     (i8080->memory)
 #define intterupt  (i8080->int_enable)
+#define port_in    (i8080->port_in)
+#define port_out   (i8080->port_out)
 
 #define reg_b    (regs[BC_REG_INDEX].byte.h)
 #define reg_c    (regs[BC_REG_INDEX].byte.l)
@@ -264,6 +266,9 @@ void intel_8080_reset(i8080_t *i8080)
 	pc = 0xF800;
 
 	reg_a |= 0x02;
+
+	port_in = NULL;
+	port_out = NULL;
 }
 
 int intel_8080_execute(i8080_t *i8080, int cycles)
@@ -963,8 +968,9 @@ int intel_8080_execute(i8080_t *i8080, int cycles)
 				continue;
 			}
 			break;
-		case 0xD3: /* OUT d8 */
-			/* TODO: Special */
+		case 0xD3: /* OUT d8 */ /* Special */
+			byte = __i8080_mem_read_b(pc + 1);
+			port_out(i8080, byte, reg_a);
 			break;
 		case 0xD4: /* CNC a16 */
 			if (!flag->cy) {
@@ -997,8 +1003,9 @@ int intel_8080_execute(i8080_t *i8080, int cycles)
 				continue;
 			}
 			break;
-		case 0xDB: /* IN d8 */
-			/* TODO: Special */
+		case 0xDB: /* IN d8 */ /* Special */
+			byte = __i8080_mem_read_b(pc + 1);
+			reg_a = port_in(i8080, byte);
 			break;
 		case 0xDC: /* CC a16 */
 			if (flag->cy) {

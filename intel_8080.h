@@ -40,6 +40,8 @@ typedef struct {
 	uint16_t pc;
 	uint8_t *memory;
 	uint8_t int_enable;
+	uint8_t (*port_in)(void *, uint8_t);
+	void (*port_out)(void *, uint8_t, uint8_t);
 } i8080_t;
 
 extern void intel_8080_reset(i8080_t *);
