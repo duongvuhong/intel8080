@@ -24,13 +24,14 @@ typedef union {
 } pair_register_t;
 
 typedef struct __attribute__((packed)) {
+	uint8_t cy:1;
+	uint8_t unused1:1;
+	uint8_t p:1;
+	uint8_t unused3:1;
+	uint8_t ac:1;
+	uint8_t unused5:1;
 	uint8_t z:1;
 	uint8_t s:1;
-	uint8_t p:1;
-	uint8_t cy:1;
-	uint8_t ac:1;
-	uint8_t iff:1;
-	uint8_t padding:2;
 } condition_bits_t;
 
 #define I8080_MEMORY_SIZE (64 * 1024)
@@ -39,17 +40,17 @@ typedef struct {
 	pair_register_t regs[I8080_PAIR_REGISTERS];
 	uint16_t sp;
 	uint16_t pc;
-	uint8_t *memory;
 
 	uint64_t cycles;
 	bool halted;
 
+	uint8_t (*memory_read_b)(uint16_t);
+	void (*memory_write_b)(uint16_t, uint8_t);
 	uint8_t (*port_in)(void *, uint8_t);
 	void (*port_out)(void *, uint8_t, uint8_t);
 } i8080_t;
 
 extern void intel_8080_reset(i8080_t *);
 extern void intel_8080_step(i8080_t *);
-extern void intel_8080_interrupt(i8080_t *, uint8_t);
 
 #endif /* _INTEL_8080_H */
