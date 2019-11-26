@@ -113,7 +113,7 @@ do {                                                            \
 
 #define __i8080_call(addr)                                      \
 do {                                                            \
-	__i8080_stack_push(pc + 3);                                 \
+	__i8080_stack_push(pc + i8080_instruction_size[opcode]);    \
 	pc = (addr);                                                \
 } while (0)
 
@@ -858,7 +858,6 @@ static int intel_8080_execute(i8080_t *i8080)
 	case 0xC7: /* RST 0 */
 		__i8080_call(0x0000);
 		goto ret;
-		break;
 	case 0xC8: /* RZ */
 		if (flag->z) {
 			__i8080_return();
@@ -895,7 +894,6 @@ static int intel_8080_execute(i8080_t *i8080)
 	case 0xCF: /* RST 1 */
 		__i8080_call(0x0008);
 		goto ret;
-		break;
 	case 0xD0: /* RNC */
 		if (!flag->cy) {
 			__i8080_return();
@@ -1112,7 +1110,6 @@ static int intel_8080_execute(i8080_t *i8080)
 	case 0xFF: /* RST 7 */
 		__i8080_call(0x0038);
 		goto ret;
-		break;
 	default:
 		unknown_opcode(opcode, pc);
 		return -1;
