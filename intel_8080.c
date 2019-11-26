@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define CC_VERBOSE
 #include "common.h"
 #define LOW_ENDIAN /* Intel family is low-endian */
 #include "intel_8080.h"
@@ -78,12 +79,12 @@ static int parity(unsigned int x)
 	int n = 0;
 
 	while (x > 0) {
-		if (n & 0x01)
+		if (x & 0x01)
 			n++;
 		x >>= 1;
 	}
 
-	return (n & 0x1);
+	return (n & 0x01) ? 0 : 1;
 }
 
 #define __mem_read_b(addr) memory_read_b(addr)
