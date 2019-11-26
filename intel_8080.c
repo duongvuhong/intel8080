@@ -236,21 +236,17 @@ static int intel_8080_execute(i8080_t *i8080)
 		reg_bc++;
 		break;
 	case 0x04: /* INR B */
-		byte = ++reg_b;
-		__i8080_state_cb(flag, byte, BITS_GROUP1);
+		__i8080_state_cb(flag, ++reg_b, BITS_GROUP1);
 		break;
 	case 0x05: /* DCR B */
-		byte = --reg_b;
-		__i8080_state_cb(flag, byte, BITS_GROUP1);
+		__i8080_state_cb(flag, --reg_b, BITS_GROUP1);
 		break;
 	case 0x06: /* MVI B, d8 */
 		reg_b = __mem_read_b(pc + 1);
 		break;
 	case 0x07: /* RLC */
-		byte = (reg_a >> 7) & 0x01;
-		reg_a <<= 1;
-		reg_a |= byte;
-		flag->cy = byte;
+		flag->cy = (reg_a >> 7) & 0x01;
+		reg_a = (reg_a << 1) | flag->cy;
 		break;
 	case 0x09: /* DAD B */
 		result = reg_hl + reg_bc;
@@ -264,21 +260,17 @@ static int intel_8080_execute(i8080_t *i8080)
 		reg_bc--;
 		break;
 	case 0x0C: /* INR C */
-		byte = ++reg_c;
-		__i8080_state_cb(flag, byte, BITS_GROUP1);
+		__i8080_state_cb(flag, ++reg_c, BITS_GROUP1);
 		break;
 	case 0x0D: /* DCR C */
-		byte = --reg_c;
-		__i8080_state_cb(flag, byte, BITS_GROUP1);
+		__i8080_state_cb(flag, --reg_c, BITS_GROUP1);
 		break;
 	case 0x0E: /* MVI C, d8 */
 		reg_c = __mem_read_b(pc + 1);
 		break;
 	case 0x0F: /* RRC */
-		byte = reg_a & 0x01;
-		reg_a >>= 1;
-		reg_a |= (byte << 7);
-		flag->cy = byte;
+		flag->cy = reg_a & 0x01;
+		reg_a = (reg_a >> 1) | (flag->cy << 7);
 		break;
 	case 0x11: /* LXI D, d16 */
 		reg_de = __mem_read_w(pc + 1);
@@ -290,20 +282,17 @@ static int intel_8080_execute(i8080_t *i8080)
 		reg_de++;
 		break;
 	case 0x14: /* INR D */
-		byte = ++reg_d;
-		__i8080_state_cb(flag, byte, BITS_GROUP1);
+		__i8080_state_cb(flag, ++reg_d, BITS_GROUP1);
 		break;
 	case 0x15: /* DCR D */
-		byte = --reg_d;
-		__i8080_state_cb(flag, byte, BITS_GROUP1);
+		__i8080_state_cb(flag, --reg_d, BITS_GROUP1);
 		break;
 	case 0x16: /* MVI D, d8 */
 		reg_d = __mem_read_b(pc + 1);
 		break;
 	case 0x17: /* RAL */
 		byte = (reg_a >> 7) & 0x01;
-		reg_a <<= 1;
-		reg_a |= flag->cy;
+		reg_a = (reg_a << 1) | flag->cy;
 		flag->cy = byte;
 		break;
 	case 0x19: /* DAD D */
@@ -318,21 +307,18 @@ static int intel_8080_execute(i8080_t *i8080)
 		reg_de--;
 		break;
 	case 0x1C: /* INR E */
-		byte = ++reg_e;
-		__i8080_state_cb(flag, byte, BITS_GROUP1);
+		__i8080_state_cb(flag, ++reg_e, BITS_GROUP1);
 		break;
 	case 0x1D: /* DCR E */
-		byte = --reg_e;
-		__i8080_state_cb(flag, byte, BITS_GROUP1);
+		__i8080_state_cb(flag, --reg_e, BITS_GROUP1);
 		break;
 	case 0x1E: /* MVI E, d8 */
 		reg_e = __mem_read_b(pc + 1);
 		break;
 	case 0x1F: /* RAR */
+		byte = flag->cy;
 		flag->cy = reg_a & 0x01;
-		byte = (reg_a >> 7) & 0x01;
-		reg_a >>= 1;
-		reg_a |= (byte << 7);
+		reg_a = ((reg_a >> 1) & 0x7F) | (byte << 7);
 		break;
 	case 0x21: /* LXI H, d16 */
 		reg_hl = __mem_read_w(pc + 1);
@@ -345,12 +331,10 @@ static int intel_8080_execute(i8080_t *i8080)
 		reg_hl++;
 		break;
 	case 0x24: /* INR H */
-		byte = ++reg_h;
-		__i8080_state_cb(flag, byte, BITS_GROUP1);
+		__i8080_state_cb(flag, ++reg_h, BITS_GROUP1);
 		break;
 	case 0x25: /* DCR H */
-		byte = --reg_h;
-		__i8080_state_cb(flag, byte, BITS_GROUP1);
+		__i8080_state_cb(flag, --reg_h, BITS_GROUP1);
 		break;
 	case 0x26: /* MVI H, d8 */
 		reg_h = __mem_read_b(pc + 1);
@@ -371,12 +355,10 @@ static int intel_8080_execute(i8080_t *i8080)
 		reg_hl--;
 		break;
 	case 0x2C: /* INR L */
-		byte = ++reg_l;
-		__i8080_state_cb(flag, byte, BITS_GROUP1);
+		__i8080_state_cb(flag, ++reg_l, BITS_GROUP1);
 		break;
 	case 0x2D: /* DCR L */
-		byte = --reg_l;
-		__i8080_state_cb(flag, byte, BITS_GROUP1);
+		__i8080_state_cb(flag, --reg_l, BITS_GROUP1);
 		break;
 	case 0x2E: /* MVI L, d8 */
 		reg_l = __mem_read_b(pc + 1);
@@ -424,18 +406,16 @@ static int intel_8080_execute(i8080_t *i8080)
 		sp--;
 		break;
 	case 0x3C: /* INR A */
-		byte = ++reg_a;
-		__i8080_state_cb(flag, byte, BITS_GROUP1);
+		__i8080_state_cb(flag, ++reg_a, BITS_GROUP1);
 		break;
 	case 0x3D: /* DCR A */
-		byte = --reg_a;
-		__i8080_state_cb(flag, byte, BITS_GROUP1);
+		__i8080_state_cb(flag, --reg_a, BITS_GROUP1);
 		break;
 	case 0x3E: /* MVI A, d8 */
 		reg_a = __mem_read_b(pc + 1);
 		break;
 	case 0x3F: /* CMC */
-		flag->cy = !flag->cy;
+		flag->cy = !(flag->cy);
 		break;
 	case 0x40: /* MOV B, B */
 		reg_b = reg_b;
@@ -510,7 +490,7 @@ static int intel_8080_execute(i8080_t *i8080)
 		reg_d = reg_a;
 		break;
 	case 0x58: /* MOV E, B */
-		reg_e = reg_d;
+		reg_e = reg_b;
 		break;
 	case 0x59: /* MOV E, C */
 		reg_e = reg_c;
@@ -711,13 +691,13 @@ static int intel_8080_execute(i8080_t *i8080)
 		__i8080_sbb(reg_d);
 		break;
 	case 0x9B: /* SBB E */
-		__i8080_sbb(reg_b);
+		__i8080_sbb(reg_e);
 		break;
 	case 0x9C: /* SBB H */
-		__i8080_sbb(reg_b);
+		__i8080_sbb(reg_h);
 		break;
 	case 0x9D: /* SBB L */
-		__i8080_sbb(reg_b);
+		__i8080_sbb(reg_l);
 		break;
 	case 0x9E: /* SBB M */
 		__i8080_sbb(__mem_read_b(reg_hl));
@@ -750,7 +730,7 @@ static int intel_8080_execute(i8080_t *i8080)
 		__i8080_ana(reg_a);
 		break;
 	case 0xA8: /* XRA B */
-		__i8080_xra(reg_d);
+		__i8080_xra(reg_b);
 		break;
 	case 0xA9: /* XRA C */
 		__i8080_xra(reg_c);
@@ -798,7 +778,7 @@ static int intel_8080_execute(i8080_t *i8080)
 		__i8080_ora(reg_a);
 		break;
 	case 0xB8: /* CMP B */
-		__i8080_cmp(reg_d);
+		__i8080_cmp(reg_b);
 		break;
 	case 0xB9: /* CMP C */
 		__i8080_cmp(reg_c);
@@ -886,7 +866,6 @@ static int intel_8080_execute(i8080_t *i8080)
 		offset = __mem_read_w(pc + 1);
 		__i8080_call(offset);
 		goto ret;
-		break;
 	case 0xCE: /* ACI d8 */
 		byte = __mem_read_b(pc + 1);
 		__i8080_aci(byte);
