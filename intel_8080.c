@@ -74,6 +74,10 @@ static const uint8_t i8080_instruction_cycle[256] = {
 	5, 10, 10,  4, 11, 11,  7, 11,  5,  5, 10,  4, 11, 17,  7, 11,
 };
 
+static const uint8_t half_carry_table[] = {0, 0, 1, 0, 1, 0, 1, 1};
+
+static const uint8_t sub_half_carry_table[] = {0, 1, 1, 1, 0, 0, 0, 1};
+
 static int parity(unsigned int x)
 {
 	int n = 0;
@@ -121,41 +125,37 @@ do {                                                            \
 
 #define __i8080_reposition_pc(op) (pc += i8080_instruction_size[op])
 
-enum bits_group {
-	BITS_GROUP1, /* Z, S, P, AC */
-	BITS_GROUP2, /* Z, S, P, CY, AC */
-	BITS_GROUP3, /* CY */
-};
+#define __i8080_state_zsp(res)                                  \
+do {                                                            \
+	flag->z = ((res & 0xFF) == 0);                              \
+	flag->s = ((res & 0x80) == 0x80);                           \
+	flag->p = parity(res & 0xFF);                               \
+} while (0)
 
-static void __i8080_state_cb(condition_bits_t *flg, uint32_t res, enum bits_group gr)
-{
-	switch (gr) {
-	case BITS_GROUP1:
-		flg->z = ((res & 0xFF) == 0);
-		flg->s = ((res & 0x80) == 0x80);
-		flg->p = parity(res & 0xFF);
-		flg->ac = ((res & 0x10) == 0x10);
-		break;
-	case BITS_GROUP2:
-		flg->z = ((res & 0xFF) == 0);
-		flg->s = ((res & 0x80) == 0x80);
-		flg->p = parity(res & 0xFF);
-		flg->cy = ((res & 0xFF00) > 0);
-		flg->ac = ((res & 0x10) == 0x10);
-		break;
-	case BITS_GROUP3:
-		flg->cy = ((res & 0xFFFF0000) > 0);
-		break;
-	default:
-		CC_WARNING("unknown bits group\n");
-	}
-}
+#define __i8080_inr(reg)                                        \
+do {                                                            \
+	++(reg);                                                    \
+	flag->ac = (((reg) & 0x0F) == 0);                           \
+	__i8080_state_zsp(reg);                                     \
+} while (0)
+
+#define __i8080_dcr(reg)                                        \
+do {                                                            \
+	--(reg);                                                    \
+	flag->ac = !(((reg) & 0x0F) == 0x0F);                       \
+	__i8080_state_zsp(reg);                                     \
+} while (0)
 
 #define __i8080_add(reg)                                        \
 do {                                                            \
 	work16 = reg_a + (reg);                                     \
-	__i8080_state_cb(flag, work16, BITS_GROUP2);                \
+	work8 = ((reg_a & 0x88) >> 1)                               \
+			| (((reg) & 0x88) >> 2)                             \
+			| ((work16 &0x88) >> 3);                            \
 	reg_a = (uint8_t)work16;                                    \
+	flag->cy = ((work16 & 0x0100) != 0);                        \
+	flag->ac = half_carry_table[work8 & 0x07];                  \
+	__i8080_state_zsp(work16 & 0xFF);                           \
 } while (0)
 
 #define __i8080_adc(reg)  __i8080_add((reg) + flag->cy)
@@ -167,8 +167,13 @@ do {                                                            \
 #define __i8080_sub(reg)                                        \
 do {                                                            \
 	work16 = reg_a - (reg);                                     \
-	__i8080_state_cb(flag, work16, BITS_GROUP2);                \
+	work8 = ((reg_a & 0x88) >> 1)                               \
+			| (((reg) & 0x88) >> 2)                             \
+			| ((work16 &0x88) >> 3);                            \
 	reg_a = (uint8_t)work16;                                    \
+	flag->cy = ((work16 & 0x0100) != 0);                        \
+	flag->ac = !sub_half_carry_table[work8 & 0x07];             \
+	__i8080_state_zsp(work16 & 0xFF);                           \
 } while (0)
 
 #define __i8080_sbb(reg)  __i8080_sub(((reg) + flag->cy))
@@ -179,27 +184,31 @@ do {                                                            \
 
 #define __i8080_ana(reg)                                        \
 do {                                                            \
-	work16 = reg_a & (reg);                                     \
-	__i8080_state_cb(flag, work16, BITS_GROUP2);                \
-	reg_a = (uint8_t)work16;                                    \
+	work8 = reg_a & (reg);                                      \
+	flag->cy = 0;                                               \
+	flag->ac = ((reg_a | work8) & 0x08) != 0;                   \
+	__i8080_state_zsp(work8);                                   \
+	reg_a = work8;                                              \
 } while (0)
 
 #define __i8080_ani(byte) __i8080_ana(byte)
 
 #define __i8080_xra(reg)                                        \
 do {                                                            \
-	work16 = reg_a ^ (reg);                                     \
-	__i8080_state_cb(flag, work16, BITS_GROUP2);                \
-	reg_a = (uint8_t)work16;                                    \
+	reg_a ^= (reg);                                             \
+	flag->cy = 0;                                               \
+	flag->ac = 0;                                               \
+	__i8080_state_zsp(reg_a);                                   \
 } while (0)
 
 #define __i8080_xri(byte) __i8080_xra(byte)
 
 #define __i8080_ora(reg)                                        \
 do {                                                            \
-	work16 = reg_a | (reg);                                     \
-	__i8080_state_cb(flag, work16, BITS_GROUP2);                \
-	reg_a = (uint8_t)work16;                                    \
+	reg_a |= (reg);                                             \
+	flag->cy = 0;                                               \
+	flag->ac = 0;                                               \
+	__i8080_state_zsp(reg_a);                                   \
 } while (0)
 
 #define __i8080_ori(byte) __i8080_ora(byte)
@@ -207,7 +216,9 @@ do {                                                            \
 #define __i8080_cmp(reg)                                        \
 do {                                                            \
 	work16 = reg_a - (reg);                                     \
-	__i8080_state_cb(flag, work16, BITS_GROUP2);                \
+	flag->cy = work16 >> 8;                                     \
+	flag->ac = ~(reg_a ^ work16 ^ reg) & 0x10;                  \
+	__i8080_state_zsp(work16 & 0xFF);                           \
 } while (0)
 
 #define __i8080_cpi(byte) __i8080_cmp(byte)
@@ -216,7 +227,7 @@ do {                                                            \
 do {                                                            \
 	work32 = reg_hl + (reg);                                    \
 	reg_hl = (uint16_t)work32;                                  \
-	__i8080_state_cb(flag, work32, BITS_GROUP3);                \
+	flag->cy = ((work32 & 0x10000) > 0);                        \
 } while (0)
 
 static int intel_8080_execute(i8080_t *i8080)
@@ -243,10 +254,10 @@ static int intel_8080_execute(i8080_t *i8080)
 		reg_bc++;
 		break;
 	case 0x04: /* INR B */
-		__i8080_state_cb(flag, ++reg_b, BITS_GROUP1);
+		__i8080_inr(reg_b);
 		break;
 	case 0x05: /* DCR B */
-		__i8080_state_cb(flag, --reg_b, BITS_GROUP1);
+		__i8080_dcr(reg_b);
 		break;
 	case 0x06: /* MVI B, d8 */
 		reg_b = __mem_read_b(pc + 1);
@@ -265,10 +276,10 @@ static int intel_8080_execute(i8080_t *i8080)
 		reg_bc--;
 		break;
 	case 0x0C: /* INR C */
-		__i8080_state_cb(flag, ++reg_c, BITS_GROUP1);
+		__i8080_inr(reg_c);
 		break;
 	case 0x0D: /* DCR C */
-		__i8080_state_cb(flag, --reg_c, BITS_GROUP1);
+		__i8080_dcr(reg_c);
 		break;
 	case 0x0E: /* MVI C, d8 */
 		reg_c = __mem_read_b(pc + 1);
@@ -287,10 +298,10 @@ static int intel_8080_execute(i8080_t *i8080)
 		reg_de++;
 		break;
 	case 0x14: /* INR D */
-		__i8080_state_cb(flag, ++reg_d, BITS_GROUP1);
+		__i8080_inr(reg_d);
 		break;
 	case 0x15: /* DCR D */
-		__i8080_state_cb(flag, --reg_d, BITS_GROUP1);
+		__i8080_dcr(reg_d);
 		break;
 	case 0x16: /* MVI D, d8 */
 		reg_d = __mem_read_b(pc + 1);
@@ -310,10 +321,10 @@ static int intel_8080_execute(i8080_t *i8080)
 		reg_de--;
 		break;
 	case 0x1C: /* INR E */
-		__i8080_state_cb(flag, ++reg_e, BITS_GROUP1);
+		__i8080_inr(reg_e);
 		break;
 	case 0x1D: /* DCR E */
-		__i8080_state_cb(flag, --reg_e, BITS_GROUP1);
+		__i8080_dcr(reg_e);
 		break;
 	case 0x1E: /* MVI E, d8 */
 		reg_e = __mem_read_b(pc + 1);
@@ -334,16 +345,32 @@ static int intel_8080_execute(i8080_t *i8080)
 		reg_hl++;
 		break;
 	case 0x24: /* INR H */
-		__i8080_state_cb(flag, ++reg_h, BITS_GROUP1);
+		__i8080_inr(reg_h);
 		break;
 	case 0x25: /* DCR H */
-		__i8080_state_cb(flag, --reg_h, BITS_GROUP1);
+		__i8080_dcr(reg_h);
 		break;
 	case 0x26: /* MVI H, d8 */
 		reg_h = __mem_read_b(pc + 1);
 		break;
-	case 0x27: /* DAA */
-		/* TODO: Special */
+	case 0x27: /* DAA */ /* Special */
+	{
+		uint8_t cy = flag->cy;
+		uint8_t cor = 0;
+		uint8_t lsb = reg_a & 0x0F;
+		uint8_t msb = reg_a >> 4;
+
+		if (flag->ac || lsb > 9)
+			cor = 0x06;
+
+		if (flag->cy || msb > 9 || (msb >= 9 && lsb > 9)) {
+			cor |= 0x60;
+			cy = 1;
+		}
+
+		__i8080_add(cor);
+		flag->cy = cy;
+	}
 		break;
 	case 0x29: /* DAD H */
 		__i8080_dad(reg_hl);
@@ -356,16 +383,16 @@ static int intel_8080_execute(i8080_t *i8080)
 		reg_hl--;
 		break;
 	case 0x2C: /* INR L */
-		__i8080_state_cb(flag, ++reg_l, BITS_GROUP1);
+		__i8080_inr(reg_l);
 		break;
 	case 0x2D: /* DCR L */
-		__i8080_state_cb(flag, --reg_l, BITS_GROUP1);
+		__i8080_dcr(reg_l);
 		break;
 	case 0x2E: /* MVI L, d8 */
 		reg_l = __mem_read_b(pc + 1);
 		break;
 	case 0x2F: /* CMA */
-		reg_a = !reg_a;
+		reg_a = ~(reg_a);
 		break;
 	case 0x31: /* LXI SP, d16 */
 		sp = __mem_read_w(pc + 1);
@@ -378,14 +405,14 @@ static int intel_8080_execute(i8080_t *i8080)
 		sp++;
 		break;
 	case 0x34: /* INR M */
-		work8 = __mem_read_b(reg_hl) + 1;
+		work8 = __mem_read_b(reg_hl);
+		__i8080_inr(work8);
 		__mem_write_b(reg_hl, work8);
-		__i8080_state_cb(flag, work8, BITS_GROUP1);
 		break;
 	case 0x35: /* DCR M */
-		work8 = __mem_read_b(reg_hl) - 1;
+		work8 = __mem_read_b(reg_hl);
+		__i8080_dcr(work8);
 		__mem_write_b(reg_hl, work8);
-		__i8080_state_cb(flag, work8, BITS_GROUP1);
 		break;
 	case 0x36: /* MVI M, d8 */
 		work8 = __mem_read_b(pc + 1);
@@ -405,16 +432,16 @@ static int intel_8080_execute(i8080_t *i8080)
 		sp--;
 		break;
 	case 0x3C: /* INR A */
-		__i8080_state_cb(flag, ++reg_a, BITS_GROUP1);
+		__i8080_inr(reg_a);
 		break;
 	case 0x3D: /* DCR A */
-		__i8080_state_cb(flag, --reg_a, BITS_GROUP1);
+		__i8080_dcr(reg_a);
 		break;
 	case 0x3E: /* MVI A, d8 */
 		reg_a = __mem_read_b(pc + 1);
 		break;
 	case 0x3F: /* CMC */
-		flag->cy = !(flag->cy);
+		flag->cy = ~(flag->cy);
 		break;
 	case 0x40: /* MOV B, B */
 		reg_b = reg_b;
