@@ -918,7 +918,7 @@ static int intel_8080_execute(i8080_t *i8080)
 		break;
 	case 0xD3: /* OUT d8 */ /* Special */
 		work8 = __mem_read_b(pc + 1);
-		port_out(i8080, work8, reg_a);
+		port_out(work8, reg_a);
 		break;
 	case 0xD4: /* CNC a16 */
 		if (!flag->cy) {
@@ -953,7 +953,7 @@ static int intel_8080_execute(i8080_t *i8080)
 		break;
 	case 0xDB: /* IN d8 */ /* Special */
 		work8 = __mem_read_b(pc + 1);
-		reg_a = port_in(i8080, work8);
+		reg_a = port_in(work8);
 		break;
 	case 0xDC: /* CC a16 */
 		if (flag->cy) {

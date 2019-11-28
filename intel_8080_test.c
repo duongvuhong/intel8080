@@ -25,7 +25,7 @@ static i8080_t cpu;
 
 static int test_finished = FALSE;
 
-static uint8_t port_in(void *userdata UNUSED, uint8_t port)
+static uint8_t port_in(uint8_t port)
 {
     uint8_t operation = (cpu.regs[BC_REG_INDEX].byte.l);
 
@@ -41,7 +41,7 @@ static uint8_t port_in(void *userdata UNUSED, uint8_t port)
     return 0xFF;
 }
 
-static void port_out(void *userdata UNUSED, uint8_t port UNUSED, uint8_t value UNUSED)
+static void port_out(uint8_t port UNUSED, uint8_t value UNUSED)
 {
     test_finished = TRUE;
 }
@@ -120,9 +120,9 @@ int main(int argc, char **argv)
     memory = malloc(sizeof(uint8_t) * I8080_MEMORY_SIZE);
 
     execute_test("cpu_tests/TST8080.COM", 4924LU);
-    //execute_test("cpu_tests/CPUTEST.COM", 255653383LU);
-    //execute_test("cpu_tests/8080PRE.COM", 7817LU);
-    //execute_test("cpu_tests/8080EXM.COM", 23803381171LU);
+    execute_test("cpu_tests/CPUTEST.COM", 255653383LU);
+    execute_test("cpu_tests/8080PRE.COM", 7817LU);
+    execute_test("cpu_tests/8080EXM.COM", 23803381171LU);
 
     free(memory);
 
