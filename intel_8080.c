@@ -125,7 +125,8 @@ do {                                                            \
 
 #define __i8080_call(addr)                                      \
 do {                                                            \
-	__i8080_stack_push(pc + i8080_instruction_size[opcode]);    \
+	work16 = pc + i8080_instruction_size[opcode];               \
+	__i8080_stack_push(work16);                                 \
 	pc = (addr);                                                \
 } while (0)
 
@@ -262,6 +263,8 @@ static int intel_8080_execute(i8080_t *i8080)
 {
 	int cyc = 0;
 	uint8_t opcode;
+	uint8_t byte;
+	uint16_t word;
 	uint8_t work8;
 	uint16_t work16;
 	uint32_t work32;
@@ -335,9 +338,9 @@ static int intel_8080_execute(i8080_t *i8080)
 		reg_d = __mem_read_b(pc + 1);
 		break;
 	case 0x17: /* RAL */
-		work8 = (reg_a >> 7) & 0x01;
+		byte = (reg_a >> 7) & 0x01;
 		reg_a = (reg_a << 1) | flag->cy;
-		flag->cy = work8;
+		flag->cy = byte;
 		break;
 	case 0x19: /* DAD D */
 		__i8080_dad(reg_de);
@@ -358,16 +361,16 @@ static int intel_8080_execute(i8080_t *i8080)
 		reg_e = __mem_read_b(pc + 1);
 		break;
 	case 0x1F: /* RAR */
-		work8 = flag->cy;
+		byte = flag->cy;
 		flag->cy = reg_a & 0x01;
-		reg_a = ((reg_a >> 1) & 0x7F) | (work8 << 7);
+		reg_a = ((reg_a >> 1) & 0x7F) | (byte << 7);
 		break;
 	case 0x21: /* LXI H, d16 */
 		reg_hl = __mem_read_w(pc + 1);
 		break;
 	case 0x22: /* SHLD a16 */
-		work16 = __mem_read_w(pc + 1);
-		__mem_write_w(work16, reg_hl);
+		word = __mem_read_w(pc + 1);
+		__mem_write_w(word, reg_hl);
 		break;
 	case 0x23: /* INX H */
 		reg_hl++;
@@ -404,8 +407,8 @@ static int intel_8080_execute(i8080_t *i8080)
 		__i8080_dad(reg_hl);
 		break;
 	case 0x2A: /* LHLD a16 */
-		work16 = __mem_read_w(pc + 1);
-		reg_hl = __mem_read_w(work16);
+		word = __mem_read_w(pc + 1);
+		reg_hl = __mem_read_w(word);
 		break;
 	case 0x2B: /* DCX H */
 		reg_hl--;
@@ -426,25 +429,25 @@ static int intel_8080_execute(i8080_t *i8080)
 		sp = __mem_read_w(pc + 1);
 		break;
 	case 0x32: /* STA a16 */
-		work16 = __mem_read_w(pc + 1);
-		__mem_write_b(work16, reg_a);
+		word = __mem_read_w(pc + 1);
+		__mem_write_b(word, reg_a);
 		break;
 	case 0x33: /* INX SP */
 		sp++;
 		break;
 	case 0x34: /* INR M */
-		work8 = __mem_read_b(reg_hl);
-		__i8080_inr(work8);
-		__mem_write_b(reg_hl, work8);
+		byte = __mem_read_b(reg_hl);
+		__i8080_inr(byte);
+		__mem_write_b(reg_hl, byte);
 		break;
 	case 0x35: /* DCR M */
-		work8 = __mem_read_b(reg_hl);
-		__i8080_dcr(work8);
-		__mem_write_b(reg_hl, work8);
+		byte = __mem_read_b(reg_hl);
+		__i8080_dcr(byte);
+		__mem_write_b(reg_hl, byte);
 		break;
 	case 0x36: /* MVI M, d8 */
-		work8 = __mem_read_b(pc + 1);
-		__mem_write_b(reg_hl, work8);
+		byte = __mem_read_b(pc + 1);
+		__mem_write_b(reg_hl, byte);
 		break;
 	case 0x37: /* STC */
 		flag->cy = 1;
@@ -453,8 +456,8 @@ static int intel_8080_execute(i8080_t *i8080)
 		__i8080_dad(sp);
 		break;
 	case 0x3A: /* LDA a16 */
-		work16 = __mem_read_w(pc + 1);
-		reg_a = __mem_read_b(work16);
+		word = __mem_read_w(pc + 1);
+		reg_a = __mem_read_b(word);
 		break;
 	case 0x3B: /* DCX SP */
 		sp--;
@@ -856,7 +859,7 @@ static int intel_8080_execute(i8080_t *i8080)
 		__i8080_cmp(reg_a);
 		break;
 	case 0xC0: /* RNZ */
-		if (!flag->z) {
+		if (!(flag->z)) {
 			__i8080_return();
 			cyc = 6;
 			goto ret;
@@ -866,7 +869,7 @@ static int intel_8080_execute(i8080_t *i8080)
 		__i8080_stack_pop(reg_bc);
 		break;
 	case 0xC2: /* JNZ a16 */
-		if (!flag->z) {
+		if (!(flag->z)) {
 			pc = __mem_read_w(pc + 1);
 			goto ret;
 		}
@@ -875,9 +878,9 @@ static int intel_8080_execute(i8080_t *i8080)
 		pc = __mem_read_w(pc + 1);
 		goto ret;
 	case 0xC4: /* CNZ a16 */
-		if (!flag->z) {
-			work16 = __mem_read_w(pc + 1);
-			__i8080_call(work16);
+		if (!(flag->z)) {
+			word = __mem_read_w(pc + 1);
+			__i8080_call(word);
 			cyc = 6;
 			goto ret;
 		}
@@ -886,8 +889,8 @@ static int intel_8080_execute(i8080_t *i8080)
 		__i8080_stack_push(reg_bc);
 		break;
 	case 0xC6: /* ADI d8 */
-		work8 = __mem_read_b(pc + 1);
-		__i8080_adi(work8);
+		byte = __mem_read_b(pc + 1);
+		__i8080_adi(byte);
 		break;
 	case 0xC7: /* RST 0 */
 		__i8080_call(0x0000);
@@ -910,25 +913,25 @@ static int intel_8080_execute(i8080_t *i8080)
 		break;
 	case 0xCC: /* CZ a16 */
 		if (flag->z) {
-			work16 = __mem_read_w(pc + 1);
-			__i8080_call(work16);
+			word = __mem_read_w(pc + 1);
+			__i8080_call(word);
 			cyc = 6;
 			goto ret;
 		}
 		break;
 	case 0xCD: case 0xDD: case 0xED: case 0xFD: /* CALL a16 */
-		work16 = __mem_read_w(pc + 1);
-		__i8080_call(work16);
+		word = __mem_read_w(pc + 1);
+		__i8080_call(word);
 		goto ret;
 	case 0xCE: /* ACI d8 */
-		work8 = __mem_read_b(pc + 1);
-		__i8080_aci(work8);
+		byte = __mem_read_b(pc + 1);
+		__i8080_aci(byte);
 		break;
 	case 0xCF: /* RST 1 */
 		__i8080_call(0x0008);
 		goto ret;
 	case 0xD0: /* RNC */
-		if (!flag->cy) {
+		if (!(flag->cy)) {
 			__i8080_return();
 			cyc = 6;
 			goto ret;
@@ -938,19 +941,19 @@ static int intel_8080_execute(i8080_t *i8080)
 		__i8080_stack_pop(reg_de);
 		break;
 	case 0xD2: /* JNC a16 */
-		if (!flag->cy) {
+		if (!(flag->cy)) {
 			pc = __mem_read_w(pc + 1);
 			goto ret;
 		}
 		break;
 	case 0xD3: /* OUT d8 */ /* Special */
-		work8 = __mem_read_b(pc + 1);
-		port_out(work8, reg_a);
+		byte = __mem_read_b(pc + 1);
+		port_out(byte, reg_a);
 		break;
 	case 0xD4: /* CNC a16 */
-		if (!flag->cy) {
-			work16 = __mem_read_w(pc + 1);
-			__i8080_call(work16);
+		if (!(flag->cy)) {
+			word = __mem_read_w(pc + 1);
+			__i8080_call(word);
 			cyc = 6;
 			goto ret;
 		}
@@ -959,8 +962,8 @@ static int intel_8080_execute(i8080_t *i8080)
 		__i8080_stack_push(reg_de);
 		break;
 	case 0xD6: /* SUI d8 */
-		work8 = __mem_read_b(pc + 1);
-		__i8080_sui(work8);
+		byte = __mem_read_b(pc + 1);
+		__i8080_sui(byte);
 		break;
 	case 0xD7: /* RST 2 */
 		__i8080_call(0x0010);
@@ -979,26 +982,26 @@ static int intel_8080_execute(i8080_t *i8080)
 		}
 		break;
 	case 0xDB: /* IN d8 */ /* Special */
-		work8 = __mem_read_b(pc + 1);
-		reg_a = port_in(work8);
+		byte = __mem_read_b(pc + 1);
+		reg_a = port_in(byte);
 		break;
 	case 0xDC: /* CC a16 */
 		if (flag->cy) {
-			work16 = __mem_read_w(pc + 1);
-			__i8080_call(work16);
+			word = __mem_read_w(pc + 1);
+			__i8080_call(word);
 			cyc = 6;
 			goto ret;
 		}
 		break;
 	case 0xDE: /* SBI d8 */
-		work8 = __mem_read_b(pc + 1);
-		__i8080_sbi(work8);
+		byte = __mem_read_b(pc + 1);
+		__i8080_sbi(byte);
 		break;
 	case 0xDF: /* RST 3 */
 		__i8080_call(0x0018);
 		goto ret;
 	case 0xE0: /* RPO */
-		if (!flag->p) {
+		if (!(flag->p)) {
 			__i8080_return();
 			cyc = 6;
 			goto ret;
@@ -1008,20 +1011,20 @@ static int intel_8080_execute(i8080_t *i8080)
 		__i8080_stack_pop(reg_hl);
 		break;
 	case 0xE2: /* JPO a16 */
-		if (!flag->p) {
+		if (!(flag->p)) {
 			pc = __mem_read_w(pc + 1);
 			goto ret;
 		}
 		break;
 	case 0xE3: /* XTHL */
-		work16 = reg_hl;
+		word = reg_hl;
 		reg_hl = __mem_read_w(sp);
-		__mem_write_w(sp, work16);
+		__mem_write_w(sp, word);
 		break;
 	case 0xE4: /* CPO a16 */
-		if (!flag->p) {
-			work16 = __mem_read_w(pc + 1);
-			__i8080_call(work16);
+		if (!(flag->p)) {
+			word = __mem_read_w(pc + 1);
+			__i8080_call(word);
 			cyc = 6;
 			goto ret;
 		}
@@ -1030,8 +1033,8 @@ static int intel_8080_execute(i8080_t *i8080)
 		__i8080_stack_push(reg_hl);
 		break;
 	case 0xE6: /* ANI d8 */
-		work8 = __mem_read_b(pc + 1);
-		__i8080_ani(work8);
+		byte = __mem_read_b(pc + 1);
+		__i8080_ani(byte);
 		break;
 	case 0xE7: /* RST 4 */
 		__i8080_call(0x0020);
@@ -1053,27 +1056,27 @@ static int intel_8080_execute(i8080_t *i8080)
 		}
 		break;
 	case 0xEB: /* XCHG */
-		work16 = reg_hl;
+		word = reg_hl;
 		reg_hl = reg_de;
-		reg_de = work16;
+		reg_de = word;
 		break;
 	case 0xEC: /* CPE a16 */
 		if (flag->p) {
-			work16 = __mem_read_w(pc + 1);
-			__i8080_call(work16);
+			word = __mem_read_w(pc + 1);
+			__i8080_call(word);
 			cyc = 6;
 			goto ret;
 		}
 		break;
 	case 0xEE: /* XRI d8 */
-		work8 = __mem_read_b(pc + 1);
-		__i8080_xri(work8);
+		byte = __mem_read_b(pc + 1);
+		__i8080_xri(byte);
 		break;
 	case 0xEF: /* RST 5 */
 		__i8080_call(0x0028);
 		goto ret;
 	case 0xF0: /* RP */
-		if (!flag->s) {
+		if (!(flag->s)) {
 			__i8080_return();
 			cyc = 6;
 			goto ret;
@@ -1084,7 +1087,7 @@ static int intel_8080_execute(i8080_t *i8080)
 		__i8080_flags_set_ub(flag);
 		break;
 	case 0xF2: /* JP a16 */
-		if (!flag->s) {
+		if (!(flag->s)) {
 			pc = __mem_read_w(pc + 1);
 			goto ret;
 		}
@@ -1093,9 +1096,9 @@ static int intel_8080_execute(i8080_t *i8080)
 		/* TODO: Special */
 		break;
 	case 0xF4: /* CP a16 */
-		if (!flag->s) {
-			work16 = __mem_read_w(pc + 1);
-			__i8080_call(work16);
+		if (!(flag->s)) {
+			word = __mem_read_w(pc + 1);
+			__i8080_call(word);
 			cyc = 6;
 			goto ret;
 		}
@@ -1104,8 +1107,8 @@ static int intel_8080_execute(i8080_t *i8080)
 		__i8080_stack_push(reg_psw);
 		break;
 	case 0xF6: /* ORI d8 */
-		work8 = __mem_read_b(pc + 1);
-		__i8080_ori(work8);
+		byte = __mem_read_b(pc + 1);
+		__i8080_ori(byte);
 		break;
 	case 0xF7: /* RST 6 */
 		__i8080_call(0x0030);
@@ -1131,15 +1134,15 @@ static int intel_8080_execute(i8080_t *i8080)
 		break;
 	case 0xFC: /* CM a16 */
 		if (flag->s) {
-			work16 = __mem_read_w(pc + 1);
-			__i8080_call(work16);
+			word = __mem_read_w(pc + 1);
+			__i8080_call(word);
 			cyc = 6;
 			goto ret;
 		}
 		break;
 	case 0xFE: /* CPI d8 */
-		work8 = __mem_read_b(pc + 1);
-		__i8080_cpi(work8);
+		byte = __mem_read_b(pc + 1);
+		__i8080_cpi(byte);
 		break;
 	case 0xFF: /* RST 7 */
 		__i8080_call(0x0038);
