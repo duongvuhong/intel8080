@@ -35,6 +35,13 @@ do {                                                                 \
 #define flag     ((condition_bits_t *)&regs[PSW_REG_INDEX].byte.l)
 #define reg_psw  (regs[PSW_REG_INDEX].word)
 
+#define __i8080_flags_set_ub(flg) \
+do {                              \
+	flg->unused1 = 1;             \
+	flg->unused3 = 0;             \
+	flg->unused5 = 0;             \
+} while (0)
+
 static const uint8_t i8080_instruction_size[256] = {
 /* x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 xA xB xC xD xE xF */
 	1, 3, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, /* 0x */
@@ -94,20 +101,20 @@ static int parity(unsigned int x)
 
 #define __mem_read_b(addr) memory_read_b(addr)
 
-#define __mem_read_w(addr) (memory_read_b(addr + 1) << 8 | memory_read_b(addr))
+#define __mem_read_w(addr) (memory_read_b((addr) + 1) << 8 | memory_read_b(addr))
 
 #define __mem_write_b(addr, byte) memory_write_b(addr, byte)
 
 #define __mem_write_w(addr, word)                               \
 do {                                                            \
-	memory_write_b(addr, ((word) & 0xFF));                      \
-	memory_write_b(addr + 1, ((word) >> 8) & 0xFF);             \
+	memory_write_b(addr, (word) & 0xFF);                        \
+	memory_write_b((addr) + 1, ((word) >> 8) & 0xFF);           \
 } while (0)
 
 #define __i8080_stack_push(v)                                   \
 do {                                                            \
-	__mem_write_w(sp - 2, v);                                   \
 	sp -= 2;                                                    \
+	__mem_write_w(sp, v);                                       \
 } while (0)
 
 #define __i8080_stack_pop(r)                                    \
@@ -124,13 +131,13 @@ do {                                                            \
 
 #define __i8080_return() __i8080_stack_pop(pc)
 
-#define __i8080_reposition_pc(op) (pc += i8080_instruction_size[op])
+#define __i8080_reposition_pc() (pc += i8080_instruction_size[opcode])
 
 #define __i8080_state_zsp(res)                                  \
 do {                                                            \
-	flag->z = ((res & 0xFF) == 0);                              \
-	flag->s = ((res & 0x80) == 0x80);                           \
-	flag->p = parity(res & 0xFF);                               \
+	flag->z = (((res) & 0xFF) == 0);                            \
+	flag->s = (((res) & 0x80) == 0x80);                         \
+	flag->p = parity((res) & 0xFF);                             \
 } while (0)
 
 #define __i8080_inr(reg)                                        \
@@ -152,44 +159,64 @@ do {                                                            \
 	work16 = reg_a + (reg);                                     \
 	work8 = ((reg_a & 0x88) >> 1)                               \
 			| (((reg) & 0x88) >> 2)                             \
-			| ((work16 &0x88) >> 3);                            \
+			| ((work16 & 0x88) >> 3);                           \
 	reg_a = (uint8_t)work16;                                    \
 	flag->cy = ((work16 & 0x0100) != 0);                        \
 	flag->ac = half_carry_table[work8 & 0x07];                  \
-	__i8080_state_zsp(work16 & 0xFF);                           \
+	__i8080_state_zsp(reg_a);                                   \
 } while (0)
 
-#define __i8080_adc(reg)  __i8080_add((reg) + flag->cy)
+#define __i8080_adc(reg)                                        \
+do {                                                            \
+	work16 = reg_a + (reg) + flag->cy;                          \
+	work8 = ((reg_a & 0x88) >> 1)                               \
+			| (((reg) & 0x88) >> 2)                             \
+			| ((work16 & 0x88) >> 3);                           \
+	reg_a = (uint8_t)work16;                                    \
+	flag->cy = ((work16 & 0x0100) != 0);                        \
+	flag->ac = half_carry_table[work8 & 0x07];                  \
+	__i8080_state_zsp(reg_a);                                   \
+} while (0)
 
 #define __i8080_adi(byte) __i8080_add(byte)
 
-#define __i8080_aci(byte) __i8080_add((byte) + flag->cy)
+#define __i8080_aci(byte) __i8080_adc(byte)
 
 #define __i8080_sub(reg)                                        \
 do {                                                            \
 	work16 = reg_a - (reg);                                     \
 	work8 = ((reg_a & 0x88) >> 1)                               \
 			| (((reg) & 0x88) >> 2)                             \
-			| ((work16 &0x88) >> 3);                            \
+			| ((work16 & 0x88) >> 3);                           \
 	reg_a = (uint8_t)work16;                                    \
 	flag->cy = ((work16 & 0x0100) != 0);                        \
 	flag->ac = !sub_half_carry_table[work8 & 0x07];             \
-	__i8080_state_zsp(work16 & 0xFF);                           \
+	__i8080_state_zsp(reg_a);                                   \
 } while (0)
 
-#define __i8080_sbb(reg)  __i8080_sub(((reg) + flag->cy))
+#define __i8080_sbb(reg)                                        \
+do {                                                            \
+	work16 = reg_a - (reg) - flag->cy;                          \
+	work8 = ((reg_a & 0x88) >> 1)                               \
+			| (((reg) & 0x88) >> 2)                             \
+			| ((work16 & 0x88) >> 3);                           \
+	reg_a = (uint8_t)work16;                                    \
+	flag->cy = ((work16 & 0x0100) != 0);                        \
+	flag->ac = !sub_half_carry_table[work8 & 0x07];             \
+	__i8080_state_zsp(reg_a);                                   \
+} while (0)
 
 #define __i8080_sui(byte) __i8080_sub(byte)
 
-#define __i8080_sbi(byte) __i8080_sub(((byte) + flag->cy))
+#define __i8080_sbi(byte) __i8080_sbb(byte)
 
 #define __i8080_ana(reg)                                        \
 do {                                                            \
 	work8 = reg_a & (reg);                                      \
 	flag->cy = 0;                                               \
-	flag->ac = ((reg_a | work8) & 0x08) != 0;                   \
-	__i8080_state_zsp(work8);                                   \
+	flag->ac = (((reg_a | (reg)) & 0x08) != 0);                 \
 	reg_a = work8;                                              \
+	__i8080_state_zsp(work8);                                   \
 } while (0)
 
 #define __i8080_ani(byte) __i8080_ana(byte)
@@ -217,8 +244,8 @@ do {                                                            \
 #define __i8080_cmp(reg)                                        \
 do {                                                            \
 	work16 = reg_a - (reg);                                     \
-	flag->cy = work16 >> 8;                                     \
-	flag->ac = ~(reg_a ^ work16 ^ reg) & 0x10;                  \
+	flag->cy = ((work16 >> 8) & 0x01);                          \
+	flag->ac = ((~(reg_a ^ work16 ^ (reg)) >> 4) & 0x01);       \
 	__i8080_state_zsp(work16 & 0xFF);                           \
 } while (0)
 
@@ -228,7 +255,7 @@ do {                                                            \
 do {                                                            \
 	work32 = reg_hl + (reg);                                    \
 	reg_hl = (uint16_t)work32;                                  \
-	flag->cy = ((work32 & 0x10000) > 0);                        \
+	flag->cy = ((work32 >> 16) & 0x01);                         \
 } while (0)
 
 static int intel_8080_execute(i8080_t *i8080)
@@ -1054,6 +1081,7 @@ static int intel_8080_execute(i8080_t *i8080)
 		break;
 	case 0xF1: /* POP PSW */
 		__i8080_stack_pop(reg_psw);
+		__i8080_flags_set_ub(flag);
 		break;
 	case 0xF2: /* JP a16 */
 		if (!flag->s) {
@@ -1121,7 +1149,7 @@ static int intel_8080_execute(i8080_t *i8080)
 		return -1;
 	}
 
-	__i8080_reposition_pc(opcode);
+	__i8080_reposition_pc();
 
 ret:
 	cyc += i8080_instruction_cycle[opcode];
@@ -1132,9 +1160,7 @@ ret:
 void intel_8080_reset(i8080_t *i8080)
 {
 	memset(regs, 0, sizeof(pair_register_t) * I8080_PAIR_REGISTERS);
-	flag->unused1 = 1;
-	flag->unused3 = 0;
-	flag->unused5 = 0;
+	__i8080_flags_set_ub(flag);
 
 	sp = 0;
 	pc = 0;
