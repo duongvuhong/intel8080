@@ -1,9 +1,9 @@
 # Table of Contents
 
-* [Install](#Install)
+* [Running](#Running)
     * [Dependencies](#Dependencies)
     * [Compile](#Compile)
-    * [Run](#Run)
+    * [Testing](#Testing)
 * [Intel 8080](#Intel-8080)
     * [About](#About)
     * [Working Registers](#Working-Registers)
@@ -12,12 +12,31 @@
     * [Stack Pointer](#Stack-Pointer)
     * [Condition Bits](#Condition-Bits)
     * [Instructions](#Instructions)
+    * [Interrupt](#Interrupt)
 * [TODO](#TODO)
 
-# Install
+# Running
 ## Dependencies
+It requires only C standard library and tested on Linux Ubuntu 18.04. But it should work on MacOS and Windows.
+
 ## Compile
-## Run
+```
+$ make
+```
+
+## Testing
+```
+$ ./intel_8080_test
+```
+
+The emulator passes the following tests:
+
+- [x] TST8080.COM
+- [x] CPUTEST.COM
+- [x] 8080PRE.COM
+- [x] 8080EXM.COM
+
+The test roms (`cpu_tests` folder) are taken from [here](http://altairclone.com/downloads/cpu_tests/) and take approximately 30 seconds on my computer (MacBook Pro mid-2014) to run.
 
 # Intel 8080
 ## About
@@ -150,5 +169,16 @@ The Parity bit is set to 1 for even parity, and is reset to 0 for odd parity.
 
 ## Instructions
 [8080 Instruction References](http://www.emulator101.com/reference/8080-by-opcode.html) or [8080 Instruction Set with color](http://pastraiser.com/cpu/i8080/i8080_opcodes.html)
+
+## Interrupt
+Interrupt sequence may be illustrated as follow:
+
+![](images/intel_8080_interrupt.PNG)
+
+When the CPU recognizes an interrupt request from an external device, the following actions occur:
+1. The instruction currently being executed is completed
+2. The interrupt flip-flop bit is reset to 0
+3. The interrupt device supplies, via hardware, one instruction which the CPU executes.
+
 
 _Please read "8080 Programmers Manual" document for more details about Intel 8080_

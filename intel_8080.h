@@ -40,9 +40,12 @@ typedef struct {
 	pair_register_t regs[I8080_PAIR_REGISTERS];
 	uint16_t sp;
 	uint16_t pc;
+	bool iff;
 
 	uint64_t cycles;
 	bool halted;
+	bool interrupt_pending;
+    uint8_t interrupt_vector;
 
 	uint8_t (*memory_read_b)(uint16_t);
 	void (*memory_write_b)(uint16_t, uint8_t);
@@ -52,5 +55,6 @@ typedef struct {
 
 extern void intel_8080_reset(i8080_t *);
 extern void intel_8080_step(i8080_t *);
+extern void intel_8080_interrupt(i8080_t *, uint8_t);
 
 #endif /* _INTEL_8080_H */

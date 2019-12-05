@@ -14,8 +14,11 @@ do {                                                                 \
 #define regs               (i8080->regs)
 #define sp                 (i8080->sp)
 #define pc                 (i8080->pc)
+#define iff                (i8080->iff)
 #define cycles             (i8080->cycles)
 #define halted             (i8080->halted)
+#define interrupt_pending  (i8080->interrupt_pending)
+#define interrupt_vector   (i8080->interrupt_vector)
 #define memory_read_b      (i8080->memory_read_b)
 #define memory_write_b     (i8080->memory_write_b)
 #define port_in            (i8080->port_in)
@@ -258,7 +261,7 @@ do {                                                            \
 	flag->cy = ((work32 >> 16) & 0x01);                         \
 } while (0)
 
-static int intel_8080_execute(i8080_t *i8080)
+static int intel_8080_execute(i8080_t *i8080, bool is_int)
 {
 	int cyc = 0;
 	uint8_t opcode;
@@ -268,7 +271,10 @@ static int intel_8080_execute(i8080_t *i8080)
 	uint16_t work16;
 	uint32_t work32;
 
-	opcode = __mem_read_b(pc);
+	if (is_int)
+		opcode = interrupt_vector;
+	else
+		opcode = __mem_read_b(pc);
 
 	switch (opcode) {
 	case 0x00: case 0x08: case 0x10: case 0x18: /* NOP */
@@ -1091,8 +1097,8 @@ static int intel_8080_execute(i8080_t *i8080)
 			goto ret;
 		}
 		break;
-	case 0xF3: /* DI */
-		/* TODO: Special */
+	case 0xF3: /* DI */ /* Special */
+		iff = FALSE;
 		break;
 	case 0xF4: /* CP a16 */
 		if (!(flag->s)) {
@@ -1128,8 +1134,8 @@ static int intel_8080_execute(i8080_t *i8080)
 			goto ret;
 		}
 		break;
-	case 0xFB: /* EI */
-		/* TODO: Special */
+	case 0xFB: /* EI */ /* Special */
+		iff = TRUE;
 		break;
 	case 0xFC: /* CM a16 */
 		if (flag->s) {
@@ -1151,10 +1157,12 @@ static int intel_8080_execute(i8080_t *i8080)
 		return -1;
 	}
 
-	__i8080_reposition_pc();
+	if (!is_int)
+		__i8080_reposition_pc();
 
 ret:
 	cyc += i8080_instruction_cycle[opcode];
+	cycles += cyc;
 
 	return cyc;
 }
@@ -1166,9 +1174,12 @@ void intel_8080_reset(i8080_t *i8080)
 
 	sp = 0;
 	pc = 0;
+	iff = FALSE;
 
 	cycles = 0;
 	halted = FALSE;
+	interrupt_pending = FALSE;
+	interrupt_vector = 0;
 
 	memory_read_b = NULL;
 	memory_write_b = NULL;
@@ -1180,11 +1191,22 @@ void intel_8080_step(i8080_t *i8080)
 {
 	int ret;
 
-	if (!halted) {
-        ret = intel_8080_execute(i8080);
-		if (ret == -1)
-			exit(42);
+	if (interrupt_pending && iff) {
+		interrupt_pending = FALSE;
+		iff = FALSE;
+		halted = FALSE;
 
-		cycles += ret;
+		ret = intel_8080_execute(i8080, TRUE);
+	} else if (!halted) {
+        ret = intel_8080_execute(i8080, FALSE);
 	}
+
+	if (ret == -1)
+		exit(42);
+}
+
+void intel_8080_interrupt(i8080_t *i8080, uint8_t opcode)
+{
+	interrupt_pending = TRUE;
+	interrupt_vector = opcode;
 }
