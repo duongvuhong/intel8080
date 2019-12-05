@@ -11,19 +11,19 @@
 
 static uint8_t *memory;
 
-uint8_t memory_read_b(uint16_t addr)
+static i8080_t cpu;
+
+static int test_finished = FALSE;
+
+static uint8_t memory_read_b(uint16_t addr)
 {
     return memory[addr];
 }
 
-void memory_write_b(uint16_t addr, uint8_t val)
+static void memory_write_b(uint16_t addr, uint8_t val)
 {
     memory[addr] = val;
 }
-
-static i8080_t cpu;
-
-static int test_finished = FALSE;
 
 static uint8_t port_in(uint8_t port)
 {

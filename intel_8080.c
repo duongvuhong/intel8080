@@ -35,13 +35,6 @@ do {                                                                 \
 #define flag     ((condition_bits_t *)&regs[PSW_REG_INDEX].byte.l)
 #define reg_psw  (regs[PSW_REG_INDEX].word)
 
-#define __i8080_flags_set_ub(flg) \
-do {                              \
-	flg->unused1 = 1;             \
-	flg->unused3 = 0;             \
-	flg->unused5 = 0;             \
-} while (0)
-
 static const uint8_t i8080_instruction_size[256] = {
 /* x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 xA xB xC xD xE xF */
 	1, 3, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, /* 0x */
@@ -109,6 +102,13 @@ static int parity(unsigned int x)
 do {                                                            \
 	memory_write_b(addr, (word) & 0xFF);                        \
 	memory_write_b((addr) + 1, ((word) >> 8) & 0xFF);           \
+} while (0)
+
+#define __i8080_flags_set_ub(flg)                               \
+do {                                                            \
+	flg->unused1 = 1;                                           \
+	flg->unused3 = 0;                                           \
+	flg->unused5 = 0;                                           \
 } while (0)
 
 #define __i8080_stack_push(v)                                   \
