@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CC_VERBOSE
 #include "common.h"
 #define LOW_ENDIAN /* Intel family is low-endian */
 #include "intel_8080.h"

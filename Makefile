@@ -1,6 +1,6 @@
 objects = intel_8080.o intel_8080_test.o
 
-CFLAGS := -std=gnu99 -Wall
+CFLAGS := -std=gnu99 -Wall -DCC_VERBOSE
 
 testpro = intel_8080_test
 
