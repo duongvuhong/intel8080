@@ -8,7 +8,7 @@
 
 #define unknown_opcode(op, pc)                                       \
 do {                                                                 \
-	CC_ERROR("Unknown instruction @ 0x%04X: 0x%02X\n", pc, opcode);  \
+	CC_ERROR("Unknown instruction @ 0x%02x\n", opcode);              \
 } while (0)
 
 #define regs               (i8080->regs)
@@ -261,9 +261,10 @@ do {                                                            \
 	flag->cy = ((work32 >> 16) & 0x01);                         \
 } while (0)
 
-static int intel_8080_execute(i8080_t *i8080, bool is_int)
+static int intel_8080_execute(i8080_t *i8080)
 {
 	int cyc = 0;
+	bool is_int = FALSE;
 	uint8_t opcode;
 	uint8_t byte;
 	uint16_t word;
@@ -271,10 +272,19 @@ static int intel_8080_execute(i8080_t *i8080, bool is_int)
 	uint16_t work16;
 	uint32_t work32;
 
-	if (is_int)
+	if (iff && interrupt_pending) {
+		interrupt_pending = FALSE;
+		iff = FALSE;
+		halted = FALSE;
+		is_int = TRUE;
+
 		opcode = interrupt_vector;
-	else
+	} else {
 		opcode = __mem_read_b(pc);
+	}
+
+	if (halted)
+		return 0;
 
 	switch (opcode) {
 	case 0x00: case 0x08: case 0x10: case 0x18: /* NOP */
@@ -1189,20 +1199,10 @@ void intel_8080_reset(i8080_t *i8080)
 
 void intel_8080_step(i8080_t *i8080)
 {
-	int ret;
-
-	if (interrupt_pending && iff) {
-		interrupt_pending = FALSE;
-		iff = FALSE;
-		halted = FALSE;
-
-		ret = intel_8080_execute(i8080, TRUE);
-	} else if (!halted) {
-        ret = intel_8080_execute(i8080, FALSE);
-	}
-
-	if (ret == -1)
+	if (intel_8080_execute(i8080) == -1) {
+		CC_ERROR("Failed to execute CPU at 0x%04x\n", pc);
 		exit(42);
+	}
 }
 
 void intel_8080_interrupt(i8080_t *i8080, uint8_t opcode)

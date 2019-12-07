@@ -6,8 +6,6 @@
 #define LOW_ENDIAN /* Intel family is low-endian */
 #include "intel_8080.h"
 
-#define CYCLES_PER_EXECUTE 10
-
 static uint8_t *memory;
 
 static i8080_t cpu;
@@ -86,6 +84,7 @@ static void execute_test(const char* filename, unsigned long cyc_expected)
     memset(memory, 0, I8080_MEMORY_SIZE);
 
     if (load_rom(filename, 0x0100) != 0) {
+        CC_ERROR("Failed to load rom %s\n", filename);
         return;
     }
 
@@ -116,7 +115,7 @@ static void execute_test(const char* filename, unsigned long cyc_expected)
 
 int main(int argc, char **argv)
 {
-    memory = malloc(sizeof(uint8_t) * I8080_MEMORY_SIZE);
+    memory = malloc(I8080_MEMORY_SIZE);
 
     execute_test("cpu_tests/TST8080.COM", 4924LU);
     execute_test("cpu_tests/CPUTEST.COM", 255653383LU);
