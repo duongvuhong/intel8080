@@ -36,7 +36,8 @@ The emulator passes the following tests:
 - [x] 8080PRE.COM
 - [x] 8080EXM.COM
 
-The test roms (`cpu_tests` folder) are taken from [here](http://altairclone.com/downloads/cpu_tests/) and take approximately 30 seconds on my computer (MacBook Pro mid-2014) to run.
+The test roms (`cpu_tests` folder) are taken from [here](http://altairclone.com/downloads/cpu_tests/) and take approximately
+23 seconds on my laptop (Asus Zenbook UX433FA) to run.
 
 # Intel 8080
 ## About
