@@ -13,7 +13,6 @@
     * [Condition Bits](#Condition-Bits)
     * [Instructions](#Instructions)
     * [Interrupt](#Interrupt)
-* [TODO](#TODO)
 
 # Running
 ## Dependencies
@@ -37,7 +36,7 @@ The emulator passes the following tests:
 - [x] 8080EXM.COM
 
 The test roms (`cpu_tests` folder) are taken from [here](http://altairclone.com/downloads/cpu_tests/) and take approximately
-23 seconds on my laptop (Asus Zenbook UX433FA) to run.
+1 minute on my laptop (Asus Zenbook UX433FA) to run.
 
 # Intel 8080
 ## About
@@ -56,8 +55,8 @@ and 64-bit x86 architectures.
 ## Working Registers
 The 8080 provides the programmer with an 8-bit accumulator and 6 additional 8-bit "scratchpad" registers.
 
-These 7 woring registers are numbered and referenced via the intergers 0-5 and 7, by convention, theses registers may also  
-be accessed via the letters B, C, D, E, H, L, abd A (for the accumulator), respectively.
+These 7 working registers are numbered and referenced via the intergers 0-5 and 7, by convention, theses registers may also  
+be accessed via the letters B, C, D, E, H, L, and A (for the accumulator), respectively.
 
 Some 8080 operations reference the working registers in pairs referenced by the letters B, D, H and PSW.
 
@@ -68,7 +67,7 @@ Some 8080 operations reference the working registers in pairs referenced by the 
 | H   | H and L (4 and 5) |
 | PSW | See below         |
 
-Register pair Program Status Word (PSW) refers to register A (7) and a special byte which reflectes the current status of  
+Register Pair Program Status Word (PSW) refers to register A (7) and a special byte which reflectes the current status of  
 the machine flags.
 
 ## Memory
