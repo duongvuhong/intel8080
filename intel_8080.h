@@ -45,7 +45,7 @@ typedef struct {
 	uint64_t cycles;
 	bool halted;
 	bool interrupt_pending;
-    uint8_t interrupt_vector;
+	uint8_t interrupt_vector;
 
 	uint8_t (*memory_read_b)(uint16_t);
 	void (*memory_write_b)(uint16_t, uint8_t);
@@ -53,8 +53,8 @@ typedef struct {
 	void (*port_out)(uint8_t, uint8_t);
 } i8080_t;
 
-extern void intel_8080_reset(i8080_t *);
-extern void intel_8080_step(i8080_t *);
-extern void intel_8080_interrupt(i8080_t *, uint8_t);
+void intel_8080_reset(i8080_t *cpu);
+void intel_8080_step(i8080_t *cpu);
+void intel_8080_interrupt(i8080_t *cpu, uint8_t opcode);
 
 #endif /* _INTEL_8080_H */

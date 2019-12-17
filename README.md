@@ -74,7 +74,7 @@ the machine flags.
 The Intel 8080 has 16 address pins, so its addresses will be 0-FFFF. It means the Intel 8080 can access up to 65kb of memory.
 
 The programmer visualizes memory as a sequence of bytes, each of which may store 8 bits (represented by 2 hexadecimal digits).  
-The bits stored in a memory byte may represent the encoded form of an intruction or may be data.
+The bits stored in a memory byte may represent the encoded form of an instruction or may be data.
 
 Memory Map:
 ```
