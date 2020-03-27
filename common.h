@@ -47,7 +47,7 @@
  * it should be a compile error if passing a pointer as an argument
  */
 #define ARRAY_COUNT(x) ((sizeof (x) / sizeof (0[x])) \
-						/ ((size_t) !(sizeof (x) % sizeof(0[x]))))
+                        / ((size_t) !(sizeof (x) % sizeof(0[x]))))
 
 /* some useful string macros */
 #define STRING_EQUAL(s1, s2)  (strcmp(s1, s2) == 0)
@@ -58,16 +58,16 @@
 
 #ifdef CC_VERBOSE
 #define CC_INFO(format, ...) \
-	fprintf(stdout, "INFO: %s:%i:%s(): " format, \
-				__FILE__, __LINE__, __func__, ##__VA_ARGS__);
+    fprintf(stdout, "INFO: %s:%i:%s(): " format, \
+                __FILE__, __LINE__, __func__, ##__VA_ARGS__);
 
 #define CC_WARNING(format, ...) \
-	fprintf(stdout, "WARNING: %s:%i:%s(): " format, \
-			__FILE__, __LINE__, __func__, ##__VA_ARGS__);
+    fprintf(stdout, "WARNING: %s:%i:%s(): " format, \
+            __FILE__, __LINE__, __func__, ##__VA_ARGS__);
 
 #define CC_ERROR(format, ...) \
-	fprintf(stderr, "ERROR: %s:%i:%s(): " format, \
-			__FILE__, __LINE__, __func__, ##__VA_ARGS__);
+    fprintf(stderr, "ERROR: %s:%i:%s(): " format, \
+            __FILE__, __LINE__, __func__, ##__VA_ARGS__);
 #else
 #define CC_INFO(format, ...)
 #define CC_WARNING(format, ...)
@@ -76,18 +76,18 @@
 
 #define RETURN_WITH_ERRMSG_IF(exp, ret, format, ...) \
 do {                                                 \
-	if (exp) {                                       \
-		CC_ERROR(format, ##__VA_ARGS__);             \
-		return (ret);                                \
-	}                                                \
+    if (exp) {                                       \
+        CC_ERROR(format, ##__VA_ARGS__);             \
+        return (ret);                                \
+    }                                                \
 } while (0)
 
 #define ASSERT_WITH_ERRMSG_IF(exp, ret, format, ...) \
 do {                                                 \
-	if (exp) {                                       \
-		CC_ERROR(format, ##__VA_ARGS__);             \
-		exit (ret);                                  \
-	}                                                \
+    if (exp) {                                       \
+        CC_ERROR(format, ##__VA_ARGS__);             \
+        exit (ret);                                  \
+    }                                                \
 } while (0)
 
 #endif

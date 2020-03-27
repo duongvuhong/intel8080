@@ -45,34 +45,34 @@ static void port_out(uint8_t port UNUSED, uint8_t value UNUSED)
 
 static int load_rom(const char *rom, uint16_t addr)
 {
-	size_t total = 0;
-	uint8_t buffer[100];
-	FILE *fp;
+    size_t total = 0;
+    uint8_t buffer[100];
+    FILE *fp;
 
-	fp = fopen(rom, "rb");
+    fp = fopen(rom, "rb");
 
-	while (total + addr < I8080_MEMORY_SIZE) {
-		size_t nread = fread(buffer, sizeof(uint8_t), 100, fp);
-		if (nread == 0)
-			break;
+    while (total + addr < I8080_MEMORY_SIZE) {
+        size_t nread = fread(buffer, sizeof(uint8_t), 100, fp);
+        if (nread == 0)
+            break;
 
-		memcpy(memory + addr + total, buffer, nread);
-		total += nread;
-	}
+        memcpy(memory + addr + total, buffer, nread);
+        total += nread;
+    }
 
-	fclose(fp);
+    fclose(fp);
 
-	if (total >= I8080_MEMORY_SIZE)
-		return -1;
+    if (total >= I8080_MEMORY_SIZE)
+        return -1;
 
-	CC_INFO("Loaded %s (%lu bytes)\n", rom, total);
+    CC_INFO("Loaded %s (%lu bytes)\n", rom, total);
 
-	return 0;
+    return 0;
 }
 
 static void execute_test(const char* filename, unsigned long cyc_expected)
 {
-	unsigned long nins = 0;
+    unsigned long nins = 0;
     long long diff;
 
     intel_8080_reset(&cpu);
@@ -124,5 +124,5 @@ int main(int argc, char **argv)
 
     free(memory);
 
-	return 0;
+    return 0;
 }
