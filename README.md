@@ -16,7 +16,7 @@
 
 # Running
 ## Dependencies
-It requires only C standard library and tested on Linux Ubuntu 18.04. But it should work on MacOS and Windows.
+It requires only C standard library and tested on GNU/Linux Ubuntu 18.04. But it should work on MacOS and Windows.
 
 ## Compile
 ```
@@ -36,7 +36,7 @@ The emulator passes the following tests:
 - [x] 8080EXM.COM
 
 The test roms (`cpu_tests` folder) are taken from [here](http://altairclone.com/downloads/cpu_tests/) and take approximately
-1 minute on my laptop (Asus Zenbook UX433FA) to run.
+23s in GNU/Linux Ubuntu 18.04 running on WSL2 on my Asus Zenbook UX433FA to finish.
 
 # Intel 8080
 ## About
